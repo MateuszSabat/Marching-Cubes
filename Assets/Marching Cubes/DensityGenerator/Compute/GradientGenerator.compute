@@ -1,0 +1,27 @@
+﻿#pragma kernel CSComputeGradients
+
+int seed;
+int gradientPointPerAxis;
+RWStructuredBuffer<float3>gradients;
+
+int index(int3 i) {
+	return i.x + i.y * gradientPointPerAxis + i.z * gradientPointPerAxis * gradientPointPerAxis;
+}
+
+float rand(int v) {
+	int r = v ^ seed;
+	r ^= (r << 13);
+	r ^= (r >> 17);
+	r ^= (r << 5);
+	float a = (float)r / (float)seed;
+	a = a - floor(a / 2) * 2 - 1;
+	return a;
+}
+
+[numthreads(8, 8, 8)]
+void CSComputeGradients(uint3 id : SV_DispatchThreadID) {
+	if (id.x >= gradientPointPerAxis || id.y >= gradientPointPerAxis || id.z >= gradientPointPerAxis)
+		return;
+	float3 g = float3(rand(id.x), rand(id.y), rand(id.z));
+	gradients[index(id)] = normalize(g);
+}

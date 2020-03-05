@@ -1,0 +1,44 @@
+﻿#pragma kernel CSGeneratePoints
+#include "Density.compute"
+#include "Noise.compute"
+
+float amplitude;
+int octaves;
+float lacunarity;
+float persistance;
+
+float add;
+
+[numthreads(numThreads, numThreads, numThreads)]
+void CSGeneratePoints(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= pointsPerAxis || id.y >= pointsPerAxis || id.z >= pointsPerAxis)
+		return;
+
+	int i = index(id.x, id.y, id.z);
+	float3 localPos = id * vertexDistance;
+
+	// set bounds
+	if ((xMin && id.x == 0) || (xMax && id.x == pointsPerAxis - 1) || (yMin && id.y == 0) || (yMax && id.y == pointsPerAxis - 1) || (zMin && id.z == 0) || (zMax && id.z == pointsPerAxis - 1)) {
+		points[i] = float4(localPos, 0);
+		return;
+	}
+
+	float frequency = size * 0.001f;
+	float strength = 1;
+	float v = 0;
+	float3 pos = localPos + chunkPos;
+	for (int j = 0; j < octaves; j++) {
+		float n = 1 - saturate(abs(noise(pos * frequency)));
+		n = n * n;
+		v += n * strength;
+
+		strength *= persistance;
+		frequency *= lacunarity;
+	}
+	v -= pos.y * 0.3;
+
+
+	points[i] = float4(localPos, saturate(v * amplitude + add));
+
+}
