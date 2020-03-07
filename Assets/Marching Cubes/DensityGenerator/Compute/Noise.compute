@@ -16,6 +16,14 @@ int index(int3 i) {
 	return i.x + i.y * gradientPointPerAxis + i.z * gradientPointPerAxis * gradientPointPerAxis;
 }
 
+float smoothnT(float x) {
+	//return x;
+
+	//return (-cos(3.14159265359f * x) + 1) * 0.5f;
+
+	return x * x * (3 - 2 * x);
+}
+
 float dotGridGradient(float3 v, int3 c) {
 	float3 dv = v - float3(c.x, c.y, c.z);
 	return dot(dv, gradients[index(c)]);
@@ -32,9 +40,9 @@ float noise(float3 v) {
 			for (int z = 0; z < 2; z++) {
 				c[z] = dotGridGradient(v, corner + int3(x, y, z));
 			}
-			b[y] = lerp(c[0], c[1], (-cos(3.14159265359f * (v.z - (float)corner.z)) + 1) * 0.5f);
+			b[y] = lerp(c[0], c[1], smoothnT(v.z - (float)corner.z));
 		}
-		a[x] = lerp(b[0], b[1], (-cos(3.14159265359f * (v.y - (float)corner.y)) + 1) * 0.5f);
+		a[x] = lerp(b[0], b[1], smoothnT(v.y - (float)corner.y));
 	}
-	return lerp(a[0], a[1], (-cos(3.14159265359f * (v.x - (float)corner.x)) + 1) *0.5f);
+	return lerp(a[0], a[1], smoothnT(v.x - (float)corner.x));
 }

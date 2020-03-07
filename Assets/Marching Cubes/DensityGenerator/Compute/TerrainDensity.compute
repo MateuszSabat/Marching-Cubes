@@ -25,7 +25,7 @@ void CSGeneratePoints(uint3 id : SV_DispatchThreadID)
 	}
 
 	float frequency = size * 0.001f;
-	float strength = 1;
+	float strength = amplitude;
 	float v = 0;
 	float3 pos = localPos + chunkPos;
 	for (int j = 0; j < octaves; j++) {
@@ -39,6 +39,6 @@ void CSGeneratePoints(uint3 id : SV_DispatchThreadID)
 	v -= pos.y * 0.3;
 
 
-	points[i] = float4(localPos, saturate(v * amplitude + add));
+	points[i] = float4(localPos, saturate(v + add));
 
 }
