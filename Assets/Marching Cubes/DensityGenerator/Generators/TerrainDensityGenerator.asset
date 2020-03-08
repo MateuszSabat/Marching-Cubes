@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gradientGenerator: {fileID: 7200000, guid: 94ba5aea7d6f1a4448036ceeff9b37ec, type: 3}
   densityCompute: {fileID: 7200000, guid: 12ef4456c4967e544bc3efcb022bf2f6, type: 3}
-  seed: 526
-  size: 20
+  seed: 503
+  size: 25
   gradientPointsPerAxis: 56
   amplitude: 5
   octaves: 8
-  lacunarity: 4
-  persistance: 0.2
+  lacunarity: 2
+  persistance: 0.4
   add: 1
