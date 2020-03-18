@@ -5,10 +5,12 @@ struct Triangle {
 	float3 a;
 	float3 b;
 	float3 c;
+	int s;
 };
 
 AppendStructuredBuffer<Triangle> triangles;
 RWStructuredBuffer<float4> points;
+RWStructuredBuffer<int> substances;
 
 uint pointsPerAxis;
 float isoLevel;
@@ -42,6 +44,18 @@ void CSMarchFlatInterpolate(uint3 id : SV_DispatchThreadID)
 		points[index(id.x, id.y + 1, id.z + 1)],
 	};
 
+	int s = 0;
+	bool set = false;
+	for (int x = 0; x < 2 && !set; x++)
+		for (int y = 0; y < 2 && !set; y++)
+			for (int z = 0; z < 2 && !set; z++)
+				if (substances[index(id.x + x, id.y + y, id.z + z)] != 0) {
+					s = substances[index(id.x + x, id.y + y, id.z + z)];
+					set = true;
+				}
+	if (!set)
+		return;
+
 	int cube = 0;
 	if (corners[0].w > isoLevel) cube += 1;
 	if (corners[1].w > isoLevel) cube += 2;
@@ -68,6 +82,7 @@ void CSMarchFlatInterpolate(uint3 id : SV_DispatchThreadID)
 		t.a = interpolate(corners[a0], corners[a1]);
 		t.b = interpolate(corners[b0], corners[b1]);
 		t.c = interpolate(corners[c0], corners[c1]);
+		t.s = s;
 
 		triangles.Append(t);
 	}

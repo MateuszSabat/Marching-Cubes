@@ -1,0 +1,33 @@
+﻿#pragma kernel CSSmoothSubstances
+
+uint substancesCount;
+uint pointsPerAxis;
+RWStructuredBuffer<int> iPoints;
+RWStructuredBuffer<int> oPoints;
+
+uint index(uint x, uint y, uint z) {
+	return x + y * pointsPerAxis + z * pointsPerAxis * pointsPerAxis;
+}
+uint index(uint3 v) {
+	return index(v.x, v.y, v.z);
+}
+
+uint substance(uint3 i) {
+	if (i.x < 0 || i.x >= pointsPerAxis || i.y < 0 || i.y >= pointsPerAxis || i.z < 0 || i.z >= pointsPerAxis)
+		return 0;
+	else return iPoints[index(i)];
+}
+
+[numthreads(8,8,1)]
+void CSSmoothSubstances (uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= pointsPerAxis || id.y >= pointsPerAxis || id.z >= pointsPerAxis)
+		return;
+
+	int subs[64];
+
+	int r = 1;
+	int i = index(id);
+
+
+}

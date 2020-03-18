@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37191602542e14849a299b76d64ec88a, type: 3}
+  m_Name: Brush_1
+  m_EditorClassIdentifier: 
+  MCMesh: {fileID: 0}
+  radious: 3
+  paintCompute: {fileID: 7200000, guid: 7f42aaa8772908a4fba81669d1f4cb2f, type: 3}
+  set: 0.867
+  smooth: 1
+  substance: 2
+  changeSubstance: 1
+  dPaintStyle: 0
+  smoothType: 1
+  imageCompute: {fileID: 7200000, guid: 04c3c1abbddd68a4487b8c9346bddcd7, type: 3}

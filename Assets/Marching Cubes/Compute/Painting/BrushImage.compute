@@ -1,0 +1,33 @@
+﻿#pragma kernel CSBrushImage
+
+
+RWTexture2D<half4> Image;
+
+int size;
+float smooth;
+
+int smoothType;
+
+[numthreads(8,8,1)]
+void CSBrushImage (uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= size || id.y >= size)
+		return;
+
+	float l = sqrt((id.x - size * 0.5f) * (id.x - size * 0.5f) + (id.y - size * 0.5f) * (id.y - size * 0.5f));
+	if (l > size * 0.5) {
+		Image[id.xy] = half4(1, 1, 1, 1);
+		return;
+	}
+
+	if (smoothType == 0)
+		l = 1.0f;
+	else if (smoothType == 1)
+		l = saturate(1 - 2 * smooth * l / size);
+	else
+		l = 0.0f;
+
+	l = 1.0f - l;
+
+	Image[id.xy] = half4(l, l, l, 1);
+}

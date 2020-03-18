@@ -1,0 +1,58 @@
+﻿#pragma kernel CSGeneratePoints
+#include "Density.compute"
+#include "Noise.compute"
+
+float amplitude;
+int octaves;
+float lacunarity;
+float persistance;
+
+float add;
+
+float inverseWholeHeight;
+
+void SetSubstance(float3 worldPos, uint i, float density) {
+	if (density < 0.5)
+		substances[i] = 0;
+	else {
+		if (worldPos.y > 19.5f)
+			substances[i] = 2;
+		else
+			substances[i] = 1;
+	}
+}
+
+[numthreads(numThreads, numThreads, numThreads)]
+void CSGeneratePoints(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= pointsPerAxis || id.y >= pointsPerAxis || id.z >= pointsPerAxis)
+		return;
+
+	int i = index(id.x, id.y, id.z);
+	float3 localPos = id * vertexDistance;
+
+	// set bounds
+	if ((xMin && id.x == 0) || (xMax && id.x == pointsPerAxis - 1) || (yMin && id.y == 0) || (yMax && id.y == pointsPerAxis - 1) || (zMin && id.z == 0) || (zMax && id.z == pointsPerAxis - 1)) {
+		SetSubstance(localPos, i, 0);
+		points[i] = float4(localPos, 0);
+		return;
+	}
+
+	float frequency = size * 0.001f;
+	float strength = amplitude;
+	float v = 0;
+	float3 pos = localPos + chunkPos;
+	for (int j = 0; j < octaves; j++) {
+		float n = 1 - saturate(abs(noise(pos * frequency)));
+		n = n * n;
+		v += n * strength;
+
+		strength *= persistance;
+		frequency *= lacunarity;
+	}
+	v -= pos.y * inverseWholeHeight - 1.0f;
+
+	v = saturate(v + add);
+	points[i] = float4(localPos, v);
+	SetSubstance(pos, i, v);
+}
