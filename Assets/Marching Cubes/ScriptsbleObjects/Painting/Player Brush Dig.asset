@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85f00492950c374babefe1e9e32db73, type: 3}
+  m_Name: Player Brush Dig
+  m_EditorClassIdentifier: 
+  MCMesh: {fileID: 0}
+  radious: 1
+  paintCompute: {fileID: 7200000, guid: 19cc60b61e68bf5478e6648f54a7099b, type: 3}
+  set: 0.1
+  smooth: 1
+  substance: 1
+  changeSubstance: 1
+  dPaintStyle: 0
+  smoothType: 1
+  imageCompute: {fileID: 0}
+  forces: []

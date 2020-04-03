@@ -7,7 +7,7 @@
 
 
 		CGPROGRAM
-		#pragma surface surf Lambert vertex:vert
+		#pragma surface surf Standard vertex:vert addshadow
 
 		struct Substance {
 			float r;
@@ -17,17 +17,17 @@
 
 		struct Input			
 		{
-			fixed3 color;
+			half3 color;
 		};
 
 		void vert(inout appdata_full v, out Input o) 
 		{
 			UNITY_INITIALIZE_OUTPUT(Input, o);
 
-			o.color = v.color; //vertexColor
+			o.color = v.color;
 		}
 
-		void surf(Input IN, inout SurfaceOutput o) 
+		void surf(Input IN, inout SurfaceOutputStandard o) 
 		{
 			o.Albedo = IN.color;
 		}

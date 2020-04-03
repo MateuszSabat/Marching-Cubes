@@ -1,0 +1,49 @@
+﻿#pragma kernel CSPaint
+
+RWStructuredBuffer<float4> points;
+RWStructuredBuffer<int> substances;
+
+uint pointsPerAxis;
+float3 localCenter;
+float radious;
+
+float force;
+float add;
+float smooth;
+int substance;
+
+int smoothType;
+
+bool xMin, xMax, yMin, yMax, zMin, zMax;
+
+uint index(uint x, uint y, uint z) {
+	return x + y * pointsPerAxis + z * pointsPerAxis * pointsPerAxis;
+}
+
+[numthreads(8, 8, 8)]
+void CSPaint(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= pointsPerAxis || id.y >= pointsPerAxis || id.z >= pointsPerAxis)
+		return;
+	if ((xMin && id.x == 0) || (xMax && id.x == pointsPerAxis - 1) || (yMin && id.y == 0) || (yMax && id.y == pointsPerAxis - 1) || (zMin && id.z == 0) || (zMax && id.z == pointsPerAxis - 1))
+		return;
+
+	uint i = index(id.x, id.y, id.z);
+
+	float l = length(points[i].xyz - localCenter);
+
+	if (l > radious)
+		return;
+
+	if (smoothType == 0)
+		l = 1;
+	else if (smoothType == 1)
+		l = saturate(1 - smooth * l / radious);
+	else
+		l = 0;
+
+	points[i].w = saturate(add * points[i].w + l * force);
+
+	if (points[i].w >= 0.5f)
+		substances[i] = substance;
+}

@@ -6,39 +6,6 @@ namespace MarchingCubes
 {
     public class Mesh : MonoBehaviour
     {
-        public static bool shaderSet = false;
-        ComputeBuffer sBuff;
-        public void Awake()
-        {
-            GenerateEditor();
-        }
-        private void SetShaderParams()
-        {
-            if (!shaderSet)
-            {
-                shaderSet = true;
-                if (SubstanceTable.substances == null)
-                    SubstanceTable.Init();
-                if (sBuff != null)
-                    sBuff.Release();
-                List<Substance> s = SubstanceTable.substances;
-                sBuff = new ComputeBuffer(s.Count, 12);
-
-                Vector3[] sData = new Vector3[s.Count];
-                for (int i = 0; i < s.Count; i++)
-                {
-                    sData[i].x = s[i].r;
-                    sData[i].y = s[i].g;
-                    sData[i].z = s[i].b;
-                }
-                sBuff.SetData(sData);
-
-                Shader.SetGlobalBuffer("substances", sBuff);
-                Shader.SetGlobalInt("pointsPerAxis", pointsPerAxis);
-                Shader.SetGlobalFloat("vertexDistance", vertexDistance);
-            }
-        }
-
         public bool exist;
 
         public enum Shading { Smooth, Flat}
@@ -78,7 +45,14 @@ namespace MarchingCubes
                 brush.MCMesh = this;
         }
 
-        public void GenerateEditor()
+        private void Start()
+        {
+            if (SubstanceTable.substances == null)
+                SubstanceTable.Init();
+            LoadFromFile();
+        }
+
+        public void Generate()
         {
             if (SubstanceTable.substances == null)
                 SubstanceTable.Init();
@@ -120,12 +94,14 @@ namespace MarchingCubes
                                 c.zeroBounds.zMax = true;
                         }
 
-                        c.GenerateMesh(isoLevel, shading);
+                        c.GenerateMesh(isoLevel, shading == Shading.Smooth);
                     }
             chunks = GetComponentsInChildren<Chunk>();
-            SetShaderParams();
+
             densityGenerator.ReleaseBuffers();
         }
+
+
         public void ResetChunks()
         {
             Chunk[] ch = GetComponentsInChildren<Chunk>();
@@ -146,13 +122,13 @@ namespace MarchingCubes
                 chunks = GetComponentsInChildren<Chunk>();
             foreach (Chunk c in chunks)
             {
-                c.UpdateMesh(isoLevel, shading == Shading.Flat);
+                c.UpdateMesh(isoLevel, shading == Shading.Smooth, false);
             }
         }
 
         private void OnDestroy()
         {
-            sBuff.Release();
+
         }
 
 
@@ -176,6 +152,8 @@ namespace MarchingCubes
 
         public void LoadFromFile()
         {
+            if (chunks == null)
+                Generate();
             for (int i = 0; i < chunks.Length; i++) {
                 chunks[i].density = new Vector4[dataSave.pointsPerChunk];
                 chunks[i].substances = new int[dataSave.pointsPerChunk];
@@ -184,7 +162,17 @@ namespace MarchingCubes
                     chunks[i].density[j] = dataSave.points[i * dataSave.pointsPerChunk + j];
                     chunks[i].substances[j] = dataSave.substances[i * dataSave.pointsPerChunk + j];
                 }
+                MeshCollider[] colliders = chunks[i].GetComponents<MeshCollider>();
+                for(int j = 0; j<colliders.Length; j++)
+                {
+                    if (Application.isPlaying)
+                        Destroy(colliders[j]);
+                    else
+                        DestroyImmediate(colliders[j]);
+                }
             }
+
+            UpdateChunks();
         }
 
 

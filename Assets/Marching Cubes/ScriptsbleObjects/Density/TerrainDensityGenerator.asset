@@ -22,4 +22,4 @@ MonoBehaviour:
   lacunarity: 2
   persistance: 0.45
   add: -1.6
-  wholeHeight: 40
+  wholeHeight: 20

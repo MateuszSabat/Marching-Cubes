@@ -46,8 +46,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   marchCompute: {fileID: 7200000, guid: ba1cbd8636331d54eaeca779c14f2a3c, type: 3}
+  recalculateNormals: {fileID: 7200000, guid: 94ef26a060c28974e91fa7452be3f7ef, type: 3}
   MCmesh: {fileID: 0}
+  zeroBounds:
+    xMin: 0
+    xMax: 0
+    yMin: 0
+    yMax: 0
+    zMin: 0
+    zMax: 0
   density: []
+  substances: 
 --- !u!33 &3073762215875506381
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -64,7 +73,7 @@ MeshRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3553365360692916305}
   m_Enabled: 1
-  m_CastShadows: 1
+  m_CastShadows: 2
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
   m_MotionVectors: 1

@@ -4,13 +4,12 @@ using UnityEngine;
 
 namespace MarchingCubes
 {
-    [CreateAssetMenu(fileName = "New Brush", menuName = "Marching Cubes/Brush")]
+    [CreateAssetMenu(fileName = "New Brush", menuName = "Marching Cubes/Brush/EditorBrush")]
     public class Brush : ScriptableObject
     {
         public Mesh MCMesh;
 
         public float radious;
-        float radiousSqr;
 
         public ComputeShader paintCompute;
 
@@ -34,20 +33,23 @@ namespace MarchingCubes
                 SubstanceTable.Init();
             if (MCMesh.chunks == null)
                 MCMesh.chunks = MCMesh.GetComponentsInChildren<Chunk>();
-            radiousSqr = radious * radious;
+            float radiousSqr = radious * radious;
             foreach(Chunk c in MCMesh.chunks)
                 if (SqrDistanceFrom(c, point) <= radiousSqr)
                     c.Paint(this, point);
         }
 
-        public void PaintChunk(ComputeBuffer density, ComputeBuffer substances, Chunk chunk, Vector3 point)
+        public virtual void PaintChunk(ComputeBuffer density, ComputeBuffer substances, Chunk chunk, Vector3 point)
         {
             paintCompute.SetBuffer(0, "points", density);
             paintCompute.SetBuffer(0, "substances", substances);
             paintCompute.SetInt("pointsPerAxis", MCMesh.pointsPerAxis);
             paintCompute.SetVector("localCenter", point - chunk.transform.position);
             paintCompute.SetFloat("radious", radious);
-            paintCompute.SetFloat("set", set);
+            if(Application.isPlaying)
+                paintCompute.SetFloat("set", set * Time.deltaTime);
+            else
+                paintCompute.SetFloat("set", set);
             paintCompute.SetFloat("add", dPaintStyle == DensnityPaintStyle.Add ? 1.0f : 0.0f);
             paintCompute.SetFloat("smooth", smooth);
             paintCompute.SetInt("smoothType", (int)smoothType);

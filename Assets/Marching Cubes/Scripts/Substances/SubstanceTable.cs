@@ -13,7 +13,15 @@ namespace MarchingCubes
         public static string dataPath = Application.dataPath + "/Marching Cubes/Data/substances.dat";
 
         public static List<Substance> substances;
-        private static List<Substance> previousSubstances;
+
+        public static float[] digForces;
+
+        private static void InitDigForces()
+        {
+            digForces = new float[substances.Count];
+            for(int i=0; i<substances.Count; i++)
+                digForces[i] = substances[i].baseDigForce;
+        }
 
         public static void Add(Substance s)
         {
@@ -82,12 +90,7 @@ namespace MarchingCubes
         public static void Init()
         {
             Load();
-            previousSubstances = new List<Substance>(substances);
-        }
-
-        public static void Reset()
-        {
-            substances = previousSubstances;
+            InitDigForces();
         }
     }
     [System.Serializable]
@@ -95,6 +98,8 @@ namespace MarchingCubes
     {
         public string name;
         public float r, g, b;
+
+        public float baseDigForce;
 
         public Color color
         {
@@ -118,13 +123,15 @@ namespace MarchingCubes
             r = 0.8f;
             g = 0.8f;
             b = 0.8f;
+            baseDigForce = 0.1f;
         }
-        public Substance(string _name, Color _color)
+        public Substance(string _name, Color _color, float _baseDigForce = 0.1f)
         {
             name = _name;
             r = _color.r;
             g = _color.g;
             b = _color.b;
+            baseDigForce = _baseDigForce;
         }
 
         public Substance(Substance s)
@@ -133,6 +140,7 @@ namespace MarchingCubes
             r = s.r;
             g = s.g;
             b = s.b;
+            baseDigForce = s.baseDigForce;
         }
     }
 }

@@ -10,8 +10,10 @@ namespace MarchingCubes
     {
         //compute
         public ComputeShader marchCompute;
+        public ComputeShader recalculateNormals;
         //kernals
         private int flatInterpolateID;
+        private int recalculateNormalsSmoothID;
 
         //buffers
         private ComputeBuffer triangleBuffer;
@@ -29,7 +31,7 @@ namespace MarchingCubes
         private MeshFilter meshFilter;
         private MeshRenderer meshRenderer;
         private Material material;
-        private MeshCollider meshCollider;
+        public MeshCollider meshCollider;
 
         [HideInInspector]
         public ZeroBounds zeroBounds;
@@ -42,9 +44,10 @@ namespace MarchingCubes
             return x + y * MCmesh.pointsPerAxis + z * MCmesh.pointsPerAxis * MCmesh.pointsPerAxis;
         }
 
-        public void GenerateMesh(float isoLevel, Mesh.Shading shading)
+        public void GenerateMesh(float isoLevel, bool smoothShading)
         {
             flatInterpolateID = marchCompute.FindKernel("CSMarchFlatInterpolate");
+            recalculateNormalsSmoothID = recalculateNormals.FindKernel("CSRecalculateNormalsSmooth");
 
             isoLevelID = Shader.PropertyToID("isoLevel");
             pointsPerAxisID = Shader.PropertyToID("pointsPerAxis");
@@ -56,89 +59,115 @@ namespace MarchingCubes
             meshRenderer.sharedMaterial = material;
 
 
-            if (shading == Mesh.Shading.Flat)
-            {
-                CreateBuffers();
-                MCmesh.densityGenerator.GeneratePoints(pointsBuffer, substancesBuffer, MCmesh.pointsPerAxis, MCmesh.vertexDistance, this);
+            CreateBuffers();
+            MCmesh.densityGenerator.GeneratePoints(pointsBuffer, substancesBuffer, MCmesh.pointsPerAxis, MCmesh.vertexDistance, this);
 
-                CreateMesh(isoLevel, true);
-            }
-            else
-            {
+            CreateMesh(isoLevel, smoothShading);
 
-            }
+            meshCollider = GetComponent<MeshCollider>();
+
             if (meshCollider != null)
-                Destroy(meshCollider);
+            {
+                if (Application.isPlaying)
+                    Destroy(meshCollider);
+                else
+                    DestroyImmediate(meshCollider);
+            }
             meshCollider = gameObject.AddComponent<MeshCollider>();
         }
 
-        public void CreateMesh(float isoLevel, bool flatShading)
+        public void CreateMesh(float isoLevel, bool smoothShading)
         {
             int voxelPerAxis = MCmesh.pointsPerAxis - 1;
             int threadPerAxis = Mathf.CeilToInt(voxelPerAxis / 8f);            
 
-            if (flatShading)
-            {
-                triangleBuffer.SetCounterValue(0);
-                marchCompute.SetBuffer(flatInterpolateID, "points", pointsBuffer);
-                marchCompute.SetBuffer(flatInterpolateID, "triangles", triangleBuffer);
-                marchCompute.SetBuffer(flatInterpolateID, "substances", substancesBuffer);
-                marchCompute.SetInt(pointsPerAxisID, MCmesh.pointsPerAxis);
-                marchCompute.SetFloat(isoLevelID, isoLevel);
+            triangleBuffer.SetCounterValue(0);
+            marchCompute.SetBuffer(flatInterpolateID, "points", pointsBuffer);
+            marchCompute.SetBuffer(flatInterpolateID, "triangles", triangleBuffer);
+            marchCompute.SetBuffer(flatInterpolateID, "substances", substancesBuffer);
+            marchCompute.SetInt(pointsPerAxisID, MCmesh.pointsPerAxis);
+            marchCompute.SetFloat(isoLevelID, isoLevel);
 
-                marchCompute.Dispatch(0, threadPerAxis, threadPerAxis, threadPerAxis);
+            marchCompute.Dispatch(0, threadPerAxis, threadPerAxis, threadPerAxis);
                     
-                ComputeBuffer.CopyCount(triangleBuffer, trisCountBuffer, 0);
-                int[] triCountArray = new int[1]{ 0 };
-                trisCountBuffer.GetData(triCountArray);
-                trisCountBuffer.Dispose();
-                int triCount = triCountArray[0];
+            ComputeBuffer.CopyCount(triangleBuffer, trisCountBuffer, 0);
+            int[] triCountArray = new int[1]{ 0 };
+            trisCountBuffer.GetData(triCountArray);
+            trisCountBuffer.Dispose();
+            int triCount = triCountArray[0];
 
-                Triangle[] tris = new Triangle[triCount];
-                triangleBuffer.GetData(tris, 0, 0, triCount);
+            Triangle[] tris = new Triangle[triCount];
+            triangleBuffer.GetData(tris, 0, 0, triCount);
 
-                UnityEngine.Mesh newMesh = new UnityEngine.Mesh();
+            UnityEngine.Mesh newMesh = new UnityEngine.Mesh();
 
-                Vector3[] vertices = new Vector3[triCount * 3];
-                Color[] colors = new Color[triCount * 3];
-                int[] triangles = new int[triCount * 3];
+            Vector3[] vertices = new Vector3[triCount * 3];
+            Color[] colors = new Color[triCount * 3];
+            int[] triangles = new int[triCount * 3];
 
-                for (int i = 0; i < triCount; i++)
-                    for (int j = 0; j < 3; j++)
-                    {
-                        vertices[i * 3 + j] = tris[i][j];
-                        colors[i * 3 + j] = SubstanceTable.substances[tris[i].s].color;
-                        triangles[i * 3 + j] = i * 3 + j;
-                    }
-                newMesh.vertices = vertices;
-                newMesh.colors = colors;
-                newMesh.triangles = triangles;
+            for (int i = 0; i < triCount; i++)
+                for (int j = 0; j < 3; j++)
+                {
+                    vertices[i * 3 + j] = tris[i][j];
+                    colors[i * 3 + j] = SubstanceTable.substances[tris[i].s].color;
+                    triangles[i * 3 + j] = i * 3 + j;
+                }
+            newMesh.vertices = vertices;
+            newMesh.colors = colors;
+            newMesh.triangles = triangles;
 
-                newMesh.RecalculateNormals();
+            newMesh.RecalculateNormals();
 
-                meshFilter.sharedMesh = newMesh;
+            if (smoothShading && triCount != 0)
+            {
+                ComputeBuffer v = new ComputeBuffer(triCount * 3, 12);
+                ComputeBuffer n = new ComputeBuffer(triCount * 3, 12);
+                ComputeBuffer nN = new ComputeBuffer(triCount * 3, 12);
 
-                material.SetBuffer("pointSubstances", substancesBuffer);
+                v.SetData(vertices);
+                n.SetData(newMesh.normals);
 
-                pointsBuffer.GetData(density);
-                substancesBuffer.GetData(substances);
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "vertices", v);
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "normals", n);
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "newNormals", nN);
+                recalculateNormals.SetInt("count", triCount * 3);
 
-                if (!Application.isPlaying)
-                    ReleaseBuffer();
+                int threadGroup = Mathf.CeilToInt(triCount * 3 / 8);
+
+                recalculateNormals.Dispatch(recalculateNormalsSmoothID, threadGroup, 1, 1);
+
+                Vector3[] normals = new Vector3[triCount * 3];
+
+                nN.GetData(normals);
+
+                newMesh.normals = normals;
             }
+
+            meshFilter.sharedMesh = newMesh;
+
+            material.SetBuffer("pointSubstances", substancesBuffer);
+
+            pointsBuffer.GetData(density);
+            substancesBuffer.GetData(substances);
+
+            if (!Application.isPlaying)
+                ReleaseBuffer();
         }
 
-        public void UpdateMesh(float isoLevel, bool flatShading)
+        public void UpdateMesh(float isoLevel, bool smoothShading, bool runPaint)
         {
             int voxelPerAxis = MCmesh.pointsPerAxis - 1;
             int threadPerAxis = Mathf.CeilToInt(voxelPerAxis / 8f);
             int voxels = voxelPerAxis * voxelPerAxis * voxelPerAxis;
             int maxTrisCount = voxels * 5;
 
-            pointsBuffer = new ComputeBuffer(substances.Length, 16);
-            pointsBuffer.SetData(density);
-            substancesBuffer = new ComputeBuffer(substances.Length, sizeof(int));
-            substancesBuffer.SetData(substances);
+            if (!runPaint)
+            {
+                pointsBuffer = new ComputeBuffer(substances.Length, 16);
+                pointsBuffer.SetData(density);
+                substancesBuffer = new ComputeBuffer(substances.Length, sizeof(int));
+                substancesBuffer.SetData(substances);
+            }
 
             triangleBuffer = new ComputeBuffer(maxTrisCount, 36 + sizeof(int), ComputeBufferType.Append);
             trisCountBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
@@ -146,51 +175,71 @@ namespace MarchingCubes
             triangleBuffer.SetCounterValue(0);
 
 
-            if (flatShading)
+            triangleBuffer.SetCounterValue(0);
+            marchCompute.SetBuffer(flatInterpolateID, "points", pointsBuffer);
+            marchCompute.SetBuffer(flatInterpolateID, "triangles", triangleBuffer);
+            marchCompute.SetBuffer(flatInterpolateID, "substances", substancesBuffer);
+            marchCompute.SetInt(pointsPerAxisID, MCmesh.pointsPerAxis);
+            marchCompute.SetFloat(isoLevelID, isoLevel);
+
+            marchCompute.Dispatch(0, threadPerAxis, threadPerAxis, threadPerAxis);
+
+            ComputeBuffer.CopyCount(triangleBuffer, trisCountBuffer, 0);
+            int[] triCountArray = new int[1] { 0 };
+            trisCountBuffer.GetData(triCountArray);
+            trisCountBuffer.Dispose();
+            int triCount = triCountArray[0];
+
+            Triangle[] tris = new Triangle[triCount];
+            triangleBuffer.GetData(tris, 0, 0, triCount);
+
+            UnityEngine.Mesh newMesh = new UnityEngine.Mesh();
+
+            Vector3[] vertices = new Vector3[triCount * 3];
+            Color[] colors = new Color[triCount * 3];
+            int[] triangles = new int[triCount * 3];
+
+            for (int i = 0; i < triCount; i++)
+                for (int j = 0; j < 3; j++)
+                {
+                    vertices[i * 3 + j] = tris[i][j];
+                    colors[i * 3 + j] = SubstanceTable.substances[tris[i].s].color;
+                    triangles[i * 3 + j] = i * 3 + j;
+                }
+            newMesh.vertices = vertices;
+            newMesh.colors = colors;
+            newMesh.triangles = triangles;
+
+            newMesh.RecalculateNormals();
+
+            if (smoothShading && triCount != 0)
             {
-                triangleBuffer.SetCounterValue(0);
-                marchCompute.SetBuffer(flatInterpolateID, "points", pointsBuffer);
-                marchCompute.SetBuffer(flatInterpolateID, "triangles", triangleBuffer);
-                marchCompute.SetBuffer(flatInterpolateID, "substances", substancesBuffer);
-                marchCompute.SetInt(pointsPerAxisID, MCmesh.pointsPerAxis);
-                marchCompute.SetFloat(isoLevelID, isoLevel);
+                ComputeBuffer v = new ComputeBuffer(triCount * 3, 12);
+                ComputeBuffer n = new ComputeBuffer(triCount * 3, 12);
+                ComputeBuffer nN = new ComputeBuffer(triCount * 3, 12);
 
-                marchCompute.Dispatch(0, threadPerAxis, threadPerAxis, threadPerAxis);
+                v.SetData(vertices);
+                n.SetData(newMesh.normals);
 
-                ComputeBuffer.CopyCount(triangleBuffer, trisCountBuffer, 0);
-                int[] triCountArray = new int[1] { 0 };
-                trisCountBuffer.GetData(triCountArray);
-                trisCountBuffer.Dispose();
-                int triCount = triCountArray[0];
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "vertices", v);
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "normals", n);
+                recalculateNormals.SetBuffer(recalculateNormalsSmoothID, "newNormals", nN);
+                recalculateNormals.SetInt("count", triCount * 3);
 
-                Triangle[] tris = new Triangle[triCount];
-                triangleBuffer.GetData(tris, 0, 0, triCount);
+                int threadGroup = Mathf.CeilToInt(triCount * 3 / 8);
 
-                UnityEngine.Mesh newMesh = new UnityEngine.Mesh();
+                recalculateNormals.Dispatch(recalculateNormalsSmoothID, threadGroup, 1, 1);
 
-                Vector3[] vertices = new Vector3[triCount * 3];
-                Color[] colors = new Color[triCount * 3];
-                int[] triangles = new int[triCount * 3];
+                Vector3[] normals = new Vector3[triCount * 3];
 
-                for (int i = 0; i < triCount; i++)
-                    for (int j = 0; j < 3; j++)
-                    {
-                        vertices[i * 3 + j] = tris[i][j];
-                        colors[i * 3 + j] = SubstanceTable.substances[tris[i].s].color;
-                        triangles[i * 3 + j] = i * 3 + j;
-                    }
-                newMesh.vertices = vertices;
-                newMesh.colors = colors;
-                newMesh.triangles = triangles;
+                nN.GetData(normals);
 
-                newMesh.RecalculateNormals();
-
-                meshFilter.sharedMesh = newMesh;
-
-                if (!Application.isPlaying)
-                    ReleaseBuffer();
+                newMesh.normals = normals;
             }
 
+            if (meshFilter == null)
+                meshFilter = GetComponent<MeshFilter>();
+            meshFilter.sharedMesh = newMesh;
 
             if (Application.isPlaying)
                 Destroy(meshCollider);
@@ -198,6 +247,8 @@ namespace MarchingCubes
                 DestroyImmediate(meshCollider);
 
             meshCollider = gameObject.AddComponent<MeshCollider>();
+
+            ReleaseBuffer();
         }
 
         void CreateBuffers()
@@ -255,8 +306,7 @@ namespace MarchingCubes
             pointsBuffer.GetData(density);
             substancesBuffer.GetData(substances);
 
-            bool shading = MCmesh.shading == Mesh.Shading.Flat ? true : false;
-            UpdateMesh(Mesh.isoLevel, shading);
+            UpdateMesh(Mesh.isoLevel, MCmesh.shading == Mesh.Shading.Smooth, true);
         }
         
         struct Triangle

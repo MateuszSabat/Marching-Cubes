@@ -170,21 +170,20 @@ namespace MarchingCubes
                     if (GUILayout.Button("Load From File", GUILayout.Height(25f)))
                     {
                         mesh.LoadFromFile();
-                        mesh.UpdateChunks();
                     }
                     if (GUILayout.Button("Save To File", GUILayout.Height(25f)))
                         mesh.SaveToFile();
                     if (GUILayout.Button("Sculpt", GUILayout.Height(25f)))
                         StartSculpting();
                     if (GUILayout.Button("Regenerate", GUILayout.Height(25f)))
-                        mesh.GenerateEditor();
+                        mesh.Generate();
                     if (GUILayout.Button("Reset", GUILayout.Height(25f)))
                         mesh.ResetChunks();
                 }
                 else
                 {
                     if (GUILayout.Button("Generate", GUILayout.Height(25f)))
-                        mesh.GenerateEditor();
+                        mesh.Generate();
                 }
             }
             else
@@ -220,7 +219,6 @@ namespace MarchingCubes
         {
             if (sculpt)
             {
-
                 HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
                 Event e = Event.current;
                 if (e.control)

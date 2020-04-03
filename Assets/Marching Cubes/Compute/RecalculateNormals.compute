@@ -1,0 +1,29 @@
+﻿#pragma kernel CSRecalculateNormalsSmooth
+
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<float3> normals;
+RWStructuredBuffer<float3> newNormals;
+int count;
+
+bool equal(float3 a, float3 b) {
+	bool3 v = a == b;
+	return v.x & v.y & v.z;
+}
+
+[numthreads(8,1,1)]
+void CSRecalculateNormalsSmooth(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= count)
+		return;
+
+	float3 normal = float3(0, 0, 0);
+	float denominator = 0;
+
+	for (int i = 0; i < count; i++)
+		if (equal(vertices[i], vertices[id.x])) {
+			normal += normals[i];
+			denominator++;
+		}
+
+	newNormals[id.x] = normalize(normal / denominator);
+}

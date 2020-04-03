@@ -113,8 +113,6 @@ namespace MarchingCubes
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Update", GUILayout.Height(25f)))
                 SubstanceTable.Init();
-        //    if (GUILayout.Button("Reset", GUILayout.Height(25f)))
-        //        SubstanceTable.Reset();
             if (GUILayout.Button("Save To File", GUILayout.Height(25f)))
                 SubstanceTable.Save();
         }
@@ -129,6 +127,8 @@ namespace MarchingCubes
             modifiedSubstance.g = c.g;
             modifiedSubstance.b = c.b;
 
+            modifiedSubstance.baseDigForce = EditorGUILayout.FloatField("Base Dig Force", modifiedSubstance.baseDigForce, GUILayout.Height(fieldHeight));
+
             EditorGUI.indentLevel--;
         }
 
@@ -140,6 +140,7 @@ namespace MarchingCubes
 
             EditorGUILayout.TextField("name", SubstanceTable.substances[i].name);
             EditorGUILayout.ColorField("color", SubstanceTable.substances[i].color);
+            EditorGUILayout.FloatField("Base Dig Force", SubstanceTable.substances[i].baseDigForce);
 
             EditorGUI.indentLevel--;
         }
